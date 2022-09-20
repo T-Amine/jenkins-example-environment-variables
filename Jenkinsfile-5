@@ -1,43 +1,47 @@
 pipeline {
   agent any
+ 
   environment {
-    AAA_TOP_LEVEL_VAR = 'topLevel'
-    AAA_RANDOM_VAR = sh(returnStdout:true,script:'openssl rand -base64 19').trim()
-    AAA_SECRET_TEXT = credentials('secret-text')
+    DEPLOY_ENV = "${env.BRANCH_NAME == 'master' ? '/apps' : '/staging'}"
+    USER_DEPLOY = = credentials('userdeploy')
+    PWD_DEPLOY = = credentials('pwddeploy')
   }
+
+  tools {nodejs "node"}
+    
   stages {
-    stage('stage 1') {
+        
+     
+    stage('install') {
       steps {
-        sh 'echo $AAA_TOP_LEVEL_VAR'
-        sh 'env | sort'
+        sh 'npm install'
+      }
+    }  
+    
+    stage('replacing') {
+      steps {
+        sh "cat ./src/app/services/http.service.ts"
+        script {
+          if (env.BRANCH_NAME == 'master') {
+            sh "sed -i 's/r7-lalivraisonv2-api/lalivraisonv2-api/g' ./src/app/services/http.service.ts"
+          }
+        }  
+        sh "cat ./src/app/services/http.service.ts"
+      }
+    }  
+            
+    stage('build') {
+      steps {
+        sh 'npm run build'
+      }
+    } 
+    
+            
+    stage('deploy') {
+      steps {
+        echo "deployed...."
       }
     }
-    stage('stage 2') {
-      environment {
-        AAA_STAGE_LEVEL_VAR = 'stageLevel'
-      }
-      steps {
-        sh 'echo $AAA_STAGE_LEVEL_VAR'
-        sh 'env | sort'
-      }
-    }
-    stage('stage 3') {
-      steps {
-        sh 'echo $AAA_STAGE_LEVEL_VAR'
-        sh 'env | sort'
-      }
-    }
-    stage('stage 4') {
-      steps {
-        sh 'echo $AAA_RANDOM_VAR'
-        sh 'env | sort'
-      }
-    }
-    stage('stage 5') {
-      steps {
-        sh 'echo $AAA_SECRET_TEXT'
-        sh 'env | sort'
-      }
-    }
+
   }
 }
